@@ -27,6 +27,8 @@
   --shadow: rgb(15 23 42 / .28);
   --backdrop: rgb(15 23 42 / .45);
   --tint-base: #fff;
+  --dock-bg: #1f3a5f;
+  --dock-icon: #1f3a5f;
   --radius: 10px;
   --dur: .2s;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -62,6 +64,8 @@
     --shadow: rgb(0 0 0 / .5);
     --backdrop: rgb(0 0 0 / .6);
     --tint-base: #161e2a;
+    --dock-bg: #27466f;
+    --dock-icon: #8ab4f8;
   }
 }
 
@@ -348,7 +352,7 @@ textarea { min-height: 84px; resize: vertical; }
 @media (max-width: 760px) {
   .app { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) auto; }
   /* Barre « magique » : l'onglet actif monte dans un cercle logé dans une encoche qui glisse. */
-  .sidebar { order: 2; padding: 30px 12px calc(10px + env(safe-area-inset-bottom)); gap: 0; background: var(--bg); color: var(--text); }
+  .sidebar { order: 2; padding: 30px 12px calc(10px + env(safe-area-inset-bottom)); gap: 0; background: var(--dock-bg); color: var(--text); border-radius: 24px 24px 0 0; }
   .brand { display: none; }
   .nav {
     --notch-x: calc((var(--active, 0) + .5) * 25%);
@@ -381,13 +385,13 @@ textarea { min-height: 84px; resize: vertical; }
     margin-left: -26px;
     border-radius: 50%;
     border: 2px solid transparent; /* reste visible en mode contraste élevé */
-    background: var(--primary);
-    box-shadow: 0 6px 16px color-mix(in srgb, var(--primary) 40%, transparent);
+    background: var(--surface);
+    box-shadow: 0 6px 16px rgb(0 0 0 / .25);
   }
   .nav a { flex-direction: column; gap: 3px; padding: 10px 2px 8px; border-radius: 0; font-size: 11px; color: var(--muted); }
   .nav a:hover { background: none; color: var(--text); }
   .nav a[aria-current="page"] { background: none; box-shadow: none; color: var(--text); font-weight: 700; }
-  .nav a[aria-current="page"] svg { color: var(--on-primary); transform: translateY(-21px); }
+  .nav a[aria-current="page"] svg { color: var(--dock-icon); transform: translateY(-21px); }
   .view { padding: 12px 16px; }
   .page-title { font-size: 20px; }
   .toolbar-group.grow { justify-content: flex-start; flex-basis: 100%; }
