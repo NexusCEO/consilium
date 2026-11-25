@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "css/styles.css"
+        ],
+        "createdAt": "2026-11-25T02:52:54.063Z",
+        "reason": "Claude: calendar event chips use a left color bar as the event-type cue, the standard calendar convention (Google Calendar) the user asked to match"
+      }
+    ]
+  }
+}
