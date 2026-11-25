@@ -43,7 +43,9 @@ function currentRoute() {
 
 function render() {
   const route = currentRoute();
-  document.querySelectorAll('[data-route]').forEach((a) => {
+  const links = [...document.querySelectorAll('.nav [data-route]')];
+  document.querySelector('.nav').style.setProperty('--active', String(Math.max(0, links.findIndex((a) => a.dataset.route === route))));
+  links.forEach((a) => {
     if (a.dataset.route === route) a.setAttribute('aria-current', 'page');
     else a.removeAttribute('aria-current');
   });
