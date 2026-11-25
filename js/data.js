@@ -1,5 +1,6 @@
 // Sauvegarde / restauration et installation de l'application.
 
+import { downloadIcs } from './ics.js';
 import { notificationStatus, requestNotifications } from './reminders.js';
 import { dateKey } from './utils.js';
 
@@ -43,6 +44,22 @@ const NOTIFICATION_TEXT = {
   unsupported: 'Ce navigateur ne gère pas les notifications. Les rappels s’affichent dans l’application.',
 };
 
+function phoneCalendarPanel(count) {
+  return `<section class="panel">
+      <h2>Calendrier du téléphone</h2>
+      <p>Copiez vos rendez-vous dans le calendrier de votre téléphone : il vous préviendra même quand Consilium est fermé.
+        Chaque événement garde son rappel et sa répétition.</p>
+      <ul class="plain">
+        <li><strong>iPhone</strong> : ouvrez le fichier téléchargé (dossier Téléchargements de Fichiers) → « Tout ajouter ».</li>
+        <li><strong>Android (Samsung, etc.)</strong> : ouvrez le fichier téléchargé avec l’application Calendrier.</li>
+        <li><strong>Google Agenda</strong> : sur ordinateur, calendar.google.com → Paramètres → Importer et exporter → choisissez le fichier. Il apparaît ensuite sur le téléphone.</li>
+      </ul>
+      <p class="muted">Pour un seul rendez-vous, ouvrez-le dans l’agenda : boutons « Fichier calendrier » et « Google Agenda ».
+        Ce que vous modifiez ensuite dans Consilium n’est pas recopié automatiquement : exportez à nouveau (les événements déjà importés sont en général mis à jour, pas dupliqués).</p>
+      <div><button type="button" class="btn btn-primary" data-act="export-ics"${count ? '' : ' disabled'}>Exporter tous les rendez-vous (${count})</button></div>
+    </section>`;
+}
+
 function notificationsPanel() {
   const status = notificationStatus();
   return `<section class="panel">
@@ -83,6 +100,7 @@ export function renderData(root, ctx) {
         <label class="btn">Restaurer une sauvegarde<input type="file" accept="application/json,.json" data-act="import" hidden></label>
       </div>
     </section>
+    ${phoneCalendarPanel(events.length)}
     ${notificationsPanel()}
     <section class="panel">
       <h2>Installer Consilium</h2>
@@ -97,6 +115,7 @@ export function renderData(root, ctx) {
     const act = e.target.closest('[data-act]')?.dataset.act;
     if (act === 'export') ctx.ui.run(() => exportBackup(ctx));
     if (act === 'install') ctx.install.prompt();
+    if (act === 'export-ics') ctx.ui.run(() => downloadIcs(ctx.store.getState().events, `consilium-agenda-${dateKey(new Date())}.ics`), 'Fichier calendrier téléchargé');
     if (act === 'notify') enableNotifications(root, ctx).catch((err) => ctx.ui.reportError(err));
     if (act === 'test-notify') testNotification(ctx).catch((err) => ctx.ui.reportError(err));
   };

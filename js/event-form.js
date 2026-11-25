@@ -1,9 +1,10 @@
 // Formulaire de création / modification d'un événement.
 
 import { DEFAULT_REMINDER, EVENT_TYPES, REMINDER_OPTIONS, REPEAT_OPTIONS } from './constants.js';
+import { downloadIcs, googleCalendarUrl } from './ics.js';
 import { notificationStatus, requestNotifications } from './reminders.js';
 import { field, optionsHtml } from './ui.js';
-import { dateKey, escapeHtml, parseLocal, timeKey } from './utils.js';
+import { dateKey, escapeHtml, parseLocal, searchable, timeKey } from './utils.js';
 
 const HOUR_MS = 3_600_000;
 
@@ -32,8 +33,22 @@ function formHtml(ev, start, end) {
     <label class="field"><span>Rappel</span><select name="reminder">${optionsHtml(REMINDER_OPTIONS, ev ? String(ev.reminder ?? '') : DEFAULT_REMINDER)}</select></label>
     <label class="field"><span>Lieu</span><input name="location" maxlength="200" value="${escapeHtml(ev?.location)}" placeholder="Adresse, salle, lien visio…"></label>
     <label class="field"><span>Notes</span><textarea name="notes" maxlength="5000">${escapeHtml(ev?.notes)}</textarea></label>
-    ${recurring ? '<p class="muted">Événement récurrent : les modifications s’appliquent à toute la série.</p>' : ''}`;
+    ${recurring ? '<p class="muted">Événement récurrent : les modifications s’appliquent à toute la série.</p>' : ''}
+    ${ev ? exportHtml(ev) : ''}`;
 }
+
+function exportHtml(ev) {
+  return `<div class="export-box">
+      <span class="field-label">Ajouter au calendrier du téléphone (avec son rappel)</span>
+      <div class="toolbar-group">
+        <button type="button" class="btn" data-export-ics>Fichier calendrier (.ics)</button>
+        <a class="btn" href="${escapeHtml(googleCalendarUrl(ev))}" target="_blank" rel="noopener">Google Agenda</a>
+      </div>
+      <span class="muted">Ajoute la version enregistrée : enregistrez d’abord vos modifications.</span>
+    </div>`;
+}
+
+const icsFilename = (title) => `consilium-${searchable(title).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'evenement'}.ics`;
 
 function readEvent(fd) {
   const title = field(fd, 'title');
@@ -85,6 +100,9 @@ export function openEventForm(ctx, ev, defaultStart) {
     onDelete: ev ? () => ctx.store.remove('events', ev.id) : null,
     onMount(form) {
       syncTimeFields(form);
+      form.querySelector('[data-export-ics]')?.addEventListener('click', () => {
+        ctx.ui.run(() => downloadIcs([ev], icsFilename(ev.title)), 'Fichier calendrier téléchargé');
+      });
       form.elements.allDay.addEventListener('change', () => syncTimeFields(form));
       form.elements.startDate.addEventListener('change', () => {
         if (form.elements.endDate.value < form.elements.startDate.value) form.elements.endDate.value = form.elements.startDate.value;
