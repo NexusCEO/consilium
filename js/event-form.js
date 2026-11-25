@@ -78,7 +78,9 @@ function syncTimeFields(form) {
 function askForNotifications(ctx) {
   const status = notificationStatus();
   if (status === 'default') {
-    requestNotifications().catch((err) => ctx.ui.reportError(err));
+    requestNotifications()
+      .then((result) => (result === 'granted' ? ctx.push.sync() : false))
+      .catch((err) => ctx.ui.reportError(err));
   } else if (status === 'denied') {
     ctx.ui.toast('Notifications bloquées : autorisez-les dans les réglages du navigateur pour recevoir les rappels.', 'error');
   }

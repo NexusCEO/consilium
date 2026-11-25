@@ -1,0 +1,11 @@
+{
+  "name": "consilium-push",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "dev": "npx wrangler@4 dev --test-scheduled",
+    "deploy": "npx wrangler@4 deploy"
+  }
+}

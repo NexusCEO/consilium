@@ -4,6 +4,7 @@ import { renderCalendar } from './calendar.js';
 import { renderContacts } from './contacts.js';
 import { renderData } from './data.js';
 import { renderGoals } from './goals.js';
+import { startPushSync } from './push.js';
 import { startReminders } from './reminders.js';
 import { createStore } from './store.js';
 import { createUi } from './ui.js';
@@ -31,7 +32,7 @@ const install = {
     render();
   },
 };
-const ctx = { store, ui, install };
+const ctx = { store, ui, install, push: { sync: () => Promise.resolve(false) } };
 
 function currentRoute() {
   const name = window.location.hash.replace(/^#\//, '').split('/')[0];
@@ -60,6 +61,7 @@ window.addEventListener('beforeinstallprompt', (e) => {
 });
 render();
 startReminders(store, ui);
+ctx.push = startPushSync(store);
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch((err) => console.error('Service worker non enregistré', err));

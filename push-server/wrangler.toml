@@ -1,0 +1,24 @@
+name = "consilium-push"
+main = "src/index.js"
+compatibility_date = "2026-11-01"
+
+[vars]
+VAPID_PUBLIC_KEY = "BKjvXtbEs6POt9g9LZBIhZSjEjZAkdGREwDdxLu5RnzTLwVswMp5BzpswjO_Q2FE5eXVdq-3W8U-85R_omgUdlE"
+VAPID_SUBJECT = "https://nexusceo.github.io/consilium/"
+ALLOWED_ORIGINS = "https://nexusceo.github.io,http://localhost:8123"
+# VAPID_PRIVATE_JWK : secret (wrangler secret put), jamais dans ce fichier.
+
+[triggers]
+crons = ["* * * * *"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "consilium-push"
+database_id = "00000000-0000-0000-0000-000000000000" # remplacé au déploiement
+
+[[ratelimits]]
+name = "LIMITER"
+namespace_id = "1001"
+  [ratelimits.simple]
+  limit = 30
+  period = 60

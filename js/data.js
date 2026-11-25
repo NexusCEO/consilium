@@ -1,8 +1,9 @@
 // Sauvegarde / restauration et installation de l'application.
 
 import { downloadIcs } from './ics.js';
+import { lastPushSync, pushStatus } from './push.js';
 import { notificationStatus, requestNotifications } from './reminders.js';
-import { dateKey } from './utils.js';
+import { dateKey, formatDate } from './utils.js';
 
 const MAX_IMPORT_BYTES = 10 * 1024 * 1024;
 
@@ -60,14 +61,26 @@ function phoneCalendarPanel(count) {
     </section>`;
 }
 
+function closedAppText() {
+  const status = pushStatus();
+  if (status === 'ready') {
+    const last = lastPushSync();
+    const when = last ? ` (synchronisé le ${formatDate(new Date(last), { dateStyle: 'short', timeStyle: 'short' })})` : '';
+    return `<strong>Application fermée : rappels actifs</strong>${when}. Ouvrez Consilium au moins une fois par mois pour les garder à jour.`;
+  }
+  if (status === 'unsupported') return 'Application fermée : pas de rappels sur ce navigateur. Sur iPhone, ajoutez d’abord Consilium à l’écran d’accueil (iOS 16.4 ou plus).';
+  if (status === 'not-configured') return 'Application fermée : rappels pas encore disponibles (serveur non configuré).';
+  return 'Application fermée : activez les notifications ci-dessous pour recevoir les rappels.';
+}
+
 function notificationsPanel() {
   const status = notificationStatus();
   return `<section class="panel">
       <h2>Rappels et notifications</h2>
       <p>${NOTIFICATION_TEXT[status]}</p>
+      <p>${closedAppText()}</p>
       <p class="muted">Choisissez le rappel de chaque événement dans son formulaire (15 minutes avant par défaut).
-        Les rappels partent tant que Consilium est ouvert, même en arrière-plan. Une application fermée ne peut pas en envoyer :
-        à la réouverture, les rappels de la dernière demi-heure sont rattrapés.</p>
+        Le serveur de rappels ne reçoit que les heures : le titre et le lieu restent sur cet appareil.</p>
       ${status === 'default' ? '<div><button type="button" class="btn btn-primary" data-act="notify">Activer les notifications</button></div>' : ''}
       ${status === 'granted' ? '<div><button type="button" class="btn" data-act="test-notify">Envoyer une notification de test</button></div>' : ''}
     </section>`;
@@ -75,6 +88,7 @@ function notificationsPanel() {
 
 async function enableNotifications(root, ctx) {
   const result = await requestNotifications();
+  if (result === 'granted') await ctx.push.sync();
   ctx.ui.toast(result === 'granted' ? 'Notifications activées' : 'Notifications non autorisées', result === 'granted' ? 'info' : 'error');
   renderData(root, ctx);
 }
