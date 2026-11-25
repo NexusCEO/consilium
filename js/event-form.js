@@ -3,7 +3,7 @@
 import { DEFAULT_REMINDER, EVENT_TYPES, REMINDER_OPTIONS, REPEAT_OPTIONS } from './constants.js';
 import { downloadIcs, googleCalendarUrl } from './ics.js';
 import { notificationStatus, requestNotifications } from './reminders.js';
-import { field, optionsHtml } from './ui.js';
+import { field, optionsHtml, requiredFieldHtml } from './ui.js';
 import { dateKey, escapeHtml, parseLocal, searchable, timeKey } from './utils.js';
 
 const HOUR_MS = 3_600_000;
@@ -12,8 +12,7 @@ function formHtml(ev, start, end) {
   const allDay = Boolean(ev?.allDay);
   const recurring = ev?.repeat && ev.repeat !== 'none';
   return `
-    <label class="field"><span>Titre</span>
-      <input name="title" required maxlength="200" value="${escapeHtml(ev?.title)}" placeholder="Ex. Réunion de chantier"></label>
+    ${requiredFieldHtml({ id: 'ev-title', name: 'title', label: 'Titre', value: ev?.title, placeholder: 'Ex. Réunion de chantier', error: 'donnez un titre à l’événement.' })}
     <div class="row">
       <label class="field"><span>Type</span><select name="type">${optionsHtml(EVENT_TYPES, ev?.type ?? 'reunion')}</select></label>
       <label class="check"><input type="checkbox" name="allDay"${allDay ? ' checked' : ''}> Toute la journée</label>

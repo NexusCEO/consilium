@@ -4,6 +4,7 @@ import { renderCalendar } from './calendar.js';
 import { renderContacts } from './contacts.js';
 import { renderData } from './data.js';
 import { renderGoals } from './goals.js';
+import { startFormAccessibility } from './form-a11y.js';
 import { startPushSync } from './push.js';
 import { startReminders } from './reminders.js';
 import { createStore } from './store.js';
@@ -12,6 +13,7 @@ import { createUi } from './ui.js';
 const ROUTES = { agenda: renderCalendar, contacts: renderContacts, objectifs: renderGoals, donnees: renderData };
 const viewEl = document.getElementById('view');
 const ui = createUi();
+startFormAccessibility();
 let installPrompt = null;
 
 let store;

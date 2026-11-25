@@ -1,6 +1,6 @@
 // Répertoire de contacts rangés par domaine d'activité.
 
-import { field } from './ui.js';
+import { field, requiredFieldHtml } from './ui.js';
 import { domainColor, escapeHtml, searchable } from './utils.js';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -69,7 +69,8 @@ function contactFormHtml(c, domains) {
     <div class="row">${input('firstName', 'Prénom', 'text', 'autocomplete="given-name"')}${input('lastName', 'Nom', 'text', 'autocomplete="family-name"')}</div>
     <label class="field"><span>Domaine d’activité</span><select name="domain">${options}</select></label>
     <div class="row">${input('role', 'Fonction / métier', 'text', 'placeholder="Ex. Architecte, Avocat…"')}${input('company', 'Entreprise / structure')}</div>
-    <div class="row">${input('phone', 'Téléphone', 'tel', 'autocomplete="tel"')}${input('email', 'E-mail', 'email', 'autocomplete="email"')}</div>
+    <div class="row">${input('phone', 'Téléphone', 'tel', 'autocomplete="tel"')}
+      ${requiredFieldHtml({ id: 'contact-email', name: 'email', label: 'E-mail', type: 'email', required: false, value: c?.email, placeholder: 'nom@exemple.com', error: 'adresse e-mail au format nom@exemple.com.' })}</div>
     ${input('address', 'Adresse')}
     <label class="field"><span>Notes</span><textarea name="notes" maxlength="5000">${escapeHtml(c?.notes)}</textarea></label>
     <label class="check"><input type="checkbox" name="favorite"${c?.favorite ? ' checked' : ''}> Favori</label>`;
@@ -102,7 +103,7 @@ function openDomainForm(ctx) {
   ctx.ui.openForm({
     title: 'Nouveau domaine d’activité',
     submitLabel: 'Ajouter',
-    html: '<label class="field"><span>Nom du domaine</span><input name="name" required maxlength="60" placeholder="Ex. Agriculture"></label>',
+    html: requiredFieldHtml({ id: 'domain-name', name: 'name', label: 'Nom du domaine', maxlength: 60, placeholder: 'Ex. Agriculture', error: 'donnez un nom au domaine.' }),
     onSubmit(fd) {
       ctx.store.addDomain(fd.get('name'));
       ctx.ui.toast('Domaine ajouté');

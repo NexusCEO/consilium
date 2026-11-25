@@ -5,7 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Consilium</title>
   <meta name="description" content="Agenda, répertoire de contacts par domaine et planification d’objectifs.">
-  <meta name="theme-color" content="#1f3a5f">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#1f3a5f" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#101826" media="(prefers-color-scheme: dark)">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -32,8 +34,15 @@
     </aside>
     <main id="view" class="view" tabindex="-1"></main>
   </div>
-  <dialog id="modal" class="modal" aria-label="Formulaire"></dialog>
-  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <dialog id="modal" class="modal" closedby="any" aria-labelledby="modal-title"></dialog>
+  <div class="toast-region" role="region" aria-label="Notifications">
+    <div id="toast" class="toast" popover="manual">
+      <span class="toast-text"></span>
+      <button type="button" class="icon-btn" popovertarget="toast" popovertargetaction="hide" aria-label="Fermer la notification">×</button>
+    </div>
+  </div>
+  <p class="visually-hidden">Annonces pour lecteur d’écran</p>
+  <div id="announcer" class="visually-hidden" aria-live="polite"></div>
   <script type="module" src="js/app.js"></script>
 </body>
 </html>

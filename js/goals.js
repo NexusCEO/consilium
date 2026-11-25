@@ -1,7 +1,7 @@
 // Planification d'objectifs : spirituels, professionnels, intellectuels, financiers…
 
 import { GOAL_CATEGORIES } from './constants.js';
-import { field, optionsHtml } from './ui.js';
+import { field, optionsHtml, requiredFieldHtml } from './ui.js';
 import { daysUntil, escapeHtml, formatDate, goalProgress, parseLocal, uid } from './utils.js';
 
 const view = { category: 'all' };
@@ -64,7 +64,7 @@ function goalFormHtml(g) {
     <input type="number" name="${name}" min="0" step="any" inputmode="decimal" value="${escapeHtml(g?.[name])}"></label>`;
   const category = g?.category ?? (view.category !== 'all' ? view.category : 'professionnel');
   return `
-    <label class="field"><span>Objectif</span><input name="title" required maxlength="200" value="${escapeHtml(g?.title)}" placeholder="Ex. Lire toute la Bible en un an"></label>
+    ${requiredFieldHtml({ id: 'goal-title', name: 'title', label: 'Objectif', value: g?.title, placeholder: 'Ex. Lire toute la Bible en un an', error: 'donnez un intitulé à l’objectif.' })}
     <div class="row">
       <label class="field"><span>Catégorie</span><select name="category">${optionsHtml(GOAL_CATEGORIES, category)}</select></label>
       <label class="field"><span>Échéance</span><input type="date" name="deadline" value="${escapeHtml(g?.deadline)}"></label>

@@ -1,11 +1,11 @@
 // Réseau d'abord (toujours la dernière version), cache en secours (hors ligne).
-const CACHE = 'consilium-v5';
+const CACHE = 'consilium-v6';
 const DATA_CACHE = 'consilium-data'; // copie locale des rappels, jamais effacée par une mise à jour
 const ASSETS = [
   './', 'index.html', 'manifest.webmanifest', 'css/styles.css',
   'js/app.js', 'js/utils.js', 'js/store.js', 'js/constants.js', 'js/ui.js',
   'js/calendar.js', 'js/event-form.js', 'js/contacts.js', 'js/goals.js', 'js/data.js', 'js/reminders.js', 'js/ics.js',
-  'js/push.js', 'js/config.js',
+  'js/push.js', 'js/config.js', 'js/form-a11y.js',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png',
 ];
 const ICON = 'icons/icon-192.png';
