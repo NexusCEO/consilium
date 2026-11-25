@@ -80,6 +80,23 @@ export function occurrencesInRange(event, rangeStart, rangeEnd) {
   return out;
 }
 
+/**
+ * Rappels à déclencher : occurrences dont l'heure de rappel (début − event.reminder minutes)
+ * tombe dans (from, to]. event.reminder vide ou absent = pas de rappel.
+ */
+export function dueReminders(events, from, to) {
+  return events.flatMap((event) => {
+    if (event.reminder === '' || event.reminder == null) return [];
+    const minutes = Number(event.reminder);
+    if (!Number.isFinite(minutes) || minutes < 0) return [];
+    const offset = minutes * MINUTE_MS;
+    return occurrencesInRange(event, new Date(+from + offset), new Date(+to + offset + 1))
+      .map((occ) => ({ event, start: occ.start, minutes, fireAt: new Date(occ.start - offset) }))
+      .filter((r) => r.fireAt > from && r.fireAt <= to)
+      .map((r) => ({ ...r, key: `${event.id}:${+r.start}:${minutes}` }));
+  });
+}
+
 /** Répartit des blocs qui se chevauchent en colonnes (comme Google Agenda). */
 export function layoutColumns(items) {
   const sorted = [...items].sort((a, b) => a.start - b.start || b.end - a.end);

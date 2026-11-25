@@ -4,6 +4,7 @@ import { renderCalendar } from './calendar.js';
 import { renderContacts } from './contacts.js';
 import { renderData } from './data.js';
 import { renderGoals } from './goals.js';
+import { startReminders } from './reminders.js';
 import { createStore } from './store.js';
 import { createUi } from './ui.js';
 
@@ -58,6 +59,7 @@ window.addEventListener('beforeinstallprompt', (e) => {
   if (currentRoute() === 'donnees') render();
 });
 render();
+startReminders(store, ui);
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch((err) => console.error('Service worker non enregistré', err));

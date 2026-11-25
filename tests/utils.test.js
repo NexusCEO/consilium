@@ -64,3 +64,20 @@ test('goalProgress : cible chiffrée, puis étapes, puis atteint', () => {
   assert.equal(goalProgress({ steps: [] }), 0);
   assert.equal(goalProgress({ achieved: true }), 1);
 });
+
+test('dueReminders : rappels dont l’heure tombe dans (from, to]', async () => {
+  const { dueReminders } = await import('../js/utils.js');
+  const events = [
+    { id: 'a', title: 'RDV avocat', start: '2026-11-25T10:00', end: '2026-11-25T11:00', reminder: '15' },
+    { id: 'b', title: 'Sans rappel', start: '2026-11-25T10:00', end: '2026-11-25T11:00', reminder: '' },
+    { id: 'c', title: 'Hebdo', start: '2026-11-04T10:00', end: '2026-11-04T10:30', repeat: 'weekly', reminder: '0' },
+    { id: 'd', title: 'Veille', start: '2026-11-26T09:45', end: '2026-11-26T10:00', reminder: '1440' },
+  ];
+  const due = dueReminders(events, d('2026-11-25T09:40'), d('2026-11-25T10:00'));
+  assert.deepEqual(due.map((r) => r.event.id).sort(), ['a', 'c', 'd']);
+  const a = due.find((r) => r.event.id === 'a');
+  assert.equal(+a.fireAt, +d('2026-11-25T09:45'));
+  assert.equal(+a.start, +d('2026-11-25T10:00'));
+  assert.ok(a.key.includes('a'));
+  assert.equal(dueReminders(events, d('2026-11-25T09:45'), d('2026-11-25T09:50')).length, 0);
+});

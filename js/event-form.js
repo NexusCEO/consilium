@@ -1,6 +1,7 @@
 // Formulaire de création / modification d'un événement.
 
-import { EVENT_TYPES, REPEAT_OPTIONS } from './constants.js';
+import { DEFAULT_REMINDER, EVENT_TYPES, REMINDER_OPTIONS, REPEAT_OPTIONS } from './constants.js';
+import { notificationStatus, requestNotifications } from './reminders.js';
 import { field, optionsHtml } from './ui.js';
 import { dateKey, escapeHtml, parseLocal, timeKey } from './utils.js';
 
@@ -28,6 +29,7 @@ function formHtml(ev, start, end) {
       <label class="field"><span>Répétition</span><select name="repeat">${optionsHtml(REPEAT_OPTIONS, ev?.repeat ?? 'none')}</select></label>
       <label class="field"><span>Jusqu’au (facultatif)</span><input type="date" name="repeatUntil" value="${escapeHtml(ev?.repeatUntil)}"></label>
     </div>
+    <label class="field"><span>Rappel</span><select name="reminder">${optionsHtml(REMINDER_OPTIONS, ev ? String(ev.reminder ?? '') : DEFAULT_REMINDER)}</select></label>
     <label class="field"><span>Lieu</span><input name="location" maxlength="200" value="${escapeHtml(ev?.location)}" placeholder="Adresse, salle, lien visio…"></label>
     <label class="field"><span>Notes</span><textarea name="notes" maxlength="5000">${escapeHtml(ev?.notes)}</textarea></label>
     ${recurring ? '<p class="muted">Événement récurrent : les modifications s’appliquent à toute la série.</p>' : ''}`;
@@ -47,12 +49,24 @@ function readEvent(fd) {
   if (!parseLocal(start) || !parseLocal(end)) throw new Error('Date ou heure invalide.');
   if (parseLocal(end) < parseLocal(start)) throw new Error('La fin doit être après le début.');
   const repeatUntil = repeat === 'none' ? '' : field(fd, 'repeatUntil');
-  return { title, type, allDay, start, end, repeat, repeatUntil, location: field(fd, 'location'), notes: field(fd, 'notes') };
+  const reminder = field(fd, 'reminder');
+  if (!REMINDER_OPTIONS.some(([value]) => value === reminder)) throw new Error('Rappel invalide.');
+  return { title, type, allDay, start, end, repeat, repeatUntil, reminder, location: field(fd, 'location'), notes: field(fd, 'notes') };
 }
 
 function syncTimeFields(form) {
   const allDay = form.elements.allDay.checked;
   form.querySelectorAll('.time-field').forEach((el) => { el.hidden = allDay; });
+}
+
+/** Demande l'autorisation pendant le geste de l'utilisateur (exigé par les navigateurs). */
+function askForNotifications(ctx) {
+  const status = notificationStatus();
+  if (status === 'default') {
+    requestNotifications().catch((err) => ctx.ui.reportError(err));
+  } else if (status === 'denied') {
+    ctx.ui.toast('Notifications bloquées : autorisez-les dans les réglages du navigateur pour recevoir les rappels.', 'error');
+  }
 }
 
 /** @param ev événement existant, ou null pour une création à `defaultStart`. */
@@ -63,8 +77,10 @@ export function openEventForm(ctx, ev, defaultStart) {
     title: ev ? 'Modifier l’événement' : 'Nouvel événement',
     html: formHtml(ev, start, end),
     onSubmit(fd) {
-      ctx.store.upsert('events', { ...(ev ?? {}), ...readEvent(fd) });
+      const data = readEvent(fd);
+      ctx.store.upsert('events', { ...(ev ?? {}), ...data });
       ctx.ui.toast(ev ? 'Événement modifié' : 'Événement créé');
+      if (data.reminder !== '') askForNotifications(ctx);
     },
     onDelete: ev ? () => ctx.store.remove('events', ev.id) : null,
     onMount(form) {

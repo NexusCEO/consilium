@@ -13,6 +13,19 @@ export const REPEAT_OPTIONS = {
   yearly: 'Tous les ans',
 };
 
+/** Rappel en minutes avant le début ('' = aucun). */
+export const REMINDER_OPTIONS = [
+  ['', 'Aucun rappel'],
+  ['0', 'À l’heure de début'],
+  ['5', '5 minutes avant'],
+  ['15', '15 minutes avant'],
+  ['30', '30 minutes avant'],
+  ['60', '1 heure avant'],
+  ['120', '2 heures avant'],
+  ['1440', '1 jour avant'],
+];
+export const DEFAULT_REMINDER = '15';
+
 export const GOAL_CATEGORIES = {
   spirituel: { label: 'Spirituel', color: '#6a4c93' },
   professionnel: { label: 'Professionnel', color: '#1f3a5f' },

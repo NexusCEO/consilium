@@ -78,9 +78,9 @@ export function createUi() {
 /** Texte nettoyé d'un champ de formulaire. */
 export const field = (fd, name) => String(fd.get(name) ?? '').trim();
 
-/** Options <select> à partir d'un objet {clé: {label}} ou {clé: libellé}. */
+/** Options <select> à partir d'un objet {clé: {label}} / {clé: libellé}, ou d'une liste ordonnée [[clé, libellé]]. */
 export function optionsHtml(entries, selected) {
-  return Object.entries(entries)
+  return (Array.isArray(entries) ? entries : Object.entries(entries))
     .map(([value, v]) => {
       const label = typeof v === 'string' ? v : v.label;
       return `<option value="${escapeHtml(value)}"${value === selected ? ' selected' : ''}>${escapeHtml(label)}</option>`;

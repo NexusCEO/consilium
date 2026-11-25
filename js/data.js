@@ -1,5 +1,6 @@
 // Sauvegarde / restauration et installation de l'application.
 
+import { notificationStatus, requestNotifications } from './reminders.js';
 import { dateKey } from './utils.js';
 
 const MAX_IMPORT_BYTES = 10 * 1024 * 1024;
@@ -35,6 +36,39 @@ async function importBackup(ctx, input) {
   }
 }
 
+const NOTIFICATION_TEXT = {
+  granted: 'Activées : vous recevrez une notification pour chaque événement qui a un rappel.',
+  default: 'Pas encore activées : les rappels s’affichent seulement dans l’application.',
+  denied: 'Bloquées par le navigateur. Autorisez-les dans les réglages du site (icône à gauche de l’adresse), puis rechargez.',
+  unsupported: 'Ce navigateur ne gère pas les notifications. Les rappels s’affichent dans l’application.',
+};
+
+function notificationsPanel() {
+  const status = notificationStatus();
+  return `<section class="panel">
+      <h2>Rappels et notifications</h2>
+      <p>${NOTIFICATION_TEXT[status]}</p>
+      <p class="muted">Choisissez le rappel de chaque événement dans son formulaire (15 minutes avant par défaut).
+        Les rappels partent tant que Consilium est ouvert, même en arrière-plan. Une application fermée ne peut pas en envoyer :
+        à la réouverture, les rappels de la dernière demi-heure sont rattrapés.</p>
+      ${status === 'default' ? '<div><button type="button" class="btn btn-primary" data-act="notify">Activer les notifications</button></div>' : ''}
+      ${status === 'granted' ? '<div><button type="button" class="btn" data-act="test-notify">Envoyer une notification de test</button></div>' : ''}
+    </section>`;
+}
+
+async function enableNotifications(root, ctx) {
+  const result = await requestNotifications();
+  ctx.ui.toast(result === 'granted' ? 'Notifications activées' : 'Notifications non autorisées', result === 'granted' ? 'info' : 'error');
+  renderData(root, ctx);
+}
+
+async function testNotification(ctx) {
+  const registration = await navigator.serviceWorker?.getRegistration();
+  const options = { body: 'Les rappels fonctionnent.', icon: 'icons/icon-192.png', tag: 'consilium-test' };
+  if (registration) await registration.showNotification('Consilium', options);
+  else new Notification('Consilium', options); // eslint-disable-line no-new
+}
+
 export function renderData(root, ctx) {
   const { events, contacts, goals } = ctx.store.getState();
   const stat = (n, label) => `<div class="stat"><strong>${n}</strong><span class="muted">${label}</span></div>`;
@@ -49,6 +83,7 @@ export function renderData(root, ctx) {
         <label class="btn">Restaurer une sauvegarde<input type="file" accept="application/json,.json" data-act="import" hidden></label>
       </div>
     </section>
+    ${notificationsPanel()}
     <section class="panel">
       <h2>Installer Consilium</h2>
       <ul class="plain">
@@ -62,6 +97,8 @@ export function renderData(root, ctx) {
     const act = e.target.closest('[data-act]')?.dataset.act;
     if (act === 'export') ctx.ui.run(() => exportBackup(ctx));
     if (act === 'install') ctx.install.prompt();
+    if (act === 'notify') enableNotifications(root, ctx).catch((err) => ctx.ui.reportError(err));
+    if (act === 'test-notify') testNotification(ctx).catch((err) => ctx.ui.reportError(err));
   };
   root.onchange = (e) => { if (e.target.matches('[data-act=import]')) importBackup(ctx, e.target); };
 }
