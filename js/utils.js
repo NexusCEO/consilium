@@ -97,6 +97,37 @@ export function dueReminders(events, from, to) {
   });
 }
 
+/** Heure d'envoi des rappels d'échéance d'objectif. */
+export const GOAL_REMINDER_TIME = '09:00';
+const MINUTES_PER_DAY = 1440;
+
+/**
+ * Échéances d'objectifs (non atteints, avec échéance et rappel) sous forme d'« événements »
+ * à l'heure GOAL_REMINDER_TIME, pour réutiliser dueReminders.
+ */
+export function goalReminderEvents(goals) {
+  return goals
+    .filter((g) => g.deadline && parseLocal(g.deadline) && g.reminder !== '' && g.reminder != null && goalProgress(g) < 1)
+    .map((g) => {
+      const at = `${g.deadline}T${GOAL_REMINDER_TIME}`;
+      return { id: `goal:${g.id}`, kind: 'goal', title: g.title, start: at, end: at, reminder: g.reminder };
+    });
+}
+
+/** Titre et texte d'une notification de rappel (rendez-vous ou échéance d'objectif). */
+export function reminderMessage({ event, start, minutes }) {
+  if (event.kind === 'goal') {
+    const days = Math.round(minutes / MINUTES_PER_DAY);
+    const day = formatDate(start, { weekday: 'long', day: 'numeric', month: 'long' });
+    let body = `Échéance dans ${days} jours (${day})`;
+    if (days === 0) body = 'Échéance aujourd’hui';
+    else if (days === 1) body = `Échéance demain (${day})`;
+    return { title: `Objectif : ${event.title}`, body };
+  }
+  const when = minutes === 0 ? 'Maintenant' : `À ${timeKey(start)}${minutes >= MINUTES_PER_DAY ? ' demain' : ''}`;
+  return { title: `Rappel : ${event.title}`, body: [when, event.location].filter(Boolean).join(' · ') };
+}
+
 const CONTACT_HORIZON_DAYS = 366;
 
 /** Prochaines occurrences (à partir de `from`, sur un an) des événements où figure un contact, triées. */

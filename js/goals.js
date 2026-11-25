@@ -1,8 +1,9 @@
 // Planification d'objectifs : spirituels, professionnels, intellectuels, financiers…
 
-import { GOAL_CATEGORIES } from './constants.js';
+import { DEFAULT_GOAL_REMINDER, GOAL_CATEGORIES, GOAL_REMINDER_OPTIONS } from './constants.js';
+import { askForNotifications } from './reminders.js';
 import { field, optionsHtml, requiredFieldHtml } from './ui.js';
-import { daysUntil, escapeHtml, formatDate, goalProgress, parseLocal, uid } from './utils.js';
+import { GOAL_REMINDER_TIME, daysUntil, escapeHtml, formatDate, goalProgress, parseLocal, uid } from './utils.js';
 
 const view = { category: 'all' };
 const numberFr = (n) => new Intl.NumberFormat('fr-FR').format(n);
@@ -69,6 +70,11 @@ function goalFormHtml(g) {
       <label class="field"><span>Catégorie</span><select name="category">${optionsHtml(GOAL_CATEGORIES, category)}</select></label>
       <label class="field"><span>Échéance</span><input type="date" name="deadline" value="${escapeHtml(g?.deadline)}"></label>
     </div>
+    <div class="field">
+      <label for="goal-reminder">Rappel d’échéance</label>
+      <select id="goal-reminder" name="reminder" aria-describedby="goal-reminder-hint">${optionsHtml(GOAL_REMINDER_OPTIONS, g ? String(g.reminder ?? '') : DEFAULT_GOAL_REMINDER)}</select>
+      <span id="goal-reminder-hint" class="muted">Notification à ${Number.parseInt(GOAL_REMINDER_TIME, 10)} h, seulement si une échéance est fixée et tant que l’objectif n’est pas atteint.</span>
+    </div>
     <label class="field"><span>Pourquoi / description</span><textarea name="description" maxlength="5000">${escapeHtml(g?.description)}</textarea></label>
     <fieldset class="fieldset"><legend>Mesure chiffrée (facultatif)</legend>
       <div class="row three">${num('current', 'Actuel')}${num('target', 'Cible')}
@@ -100,8 +106,10 @@ function readGoal(fd, form, previous) {
       const id = input.dataset.id || uid();
       return { id, text: input.value.trim(), done: doneById.get(id) ?? false };
     });
+  const reminder = field(fd, 'reminder');
+  if (!GOAL_REMINDER_OPTIONS.some(([value]) => value === reminder)) throw new Error('Rappel invalide.');
   return {
-    title, category, steps, description: field(fd, 'description'), deadline: field(fd, 'deadline'),
+    title, category, steps, reminder, description: field(fd, 'description'), deadline: field(fd, 'deadline'),
     current: readNumber(fd, 'current'), target: readNumber(fd, 'target'), unit: field(fd, 'unit'),
   };
 }
@@ -111,8 +119,10 @@ function openGoalForm(ctx, goal) {
     title: goal ? 'Modifier l’objectif' : 'Nouvel objectif',
     html: goalFormHtml(goal),
     onSubmit(fd, form) {
-      ctx.store.upsert('goals', { ...(goal ?? { achieved: false }), ...readGoal(fd, form, goal) });
+      const data = readGoal(fd, form, goal);
+      ctx.store.upsert('goals', { ...(goal ?? { achieved: false }), ...data });
       ctx.ui.toast(goal ? 'Objectif modifié' : 'Objectif créé');
+      if (data.reminder !== '' && data.deadline) askForNotifications(ctx);
     },
     onDelete: goal ? () => ctx.store.remove('goals', goal.id) : null,
     onMount(form) {

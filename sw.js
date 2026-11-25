@@ -1,5 +1,5 @@
 // Réseau d'abord (toujours la dernière version), cache en secours (hors ligne).
-const CACHE = 'consilium-v10';
+const CACHE = 'consilium-v11';
 const DATA_CACHE = 'consilium-data'; // copie locale des rappels, jamais effacée par une mise à jour
 const ASSETS = [
   './', 'index.html', 'manifest.webmanifest', 'css/styles.css',
@@ -80,9 +80,13 @@ async function showPushedReminders() {
     return self.registration.showNotification('Consilium', { body: 'Vous avez un rendez-vous bientôt.', tag: 'consilium-rappel', icon: ICON, data });
   }
   // Même « tag » que les rappels affichés par l'application ouverte : pas de doublon.
-  return Promise.all(due.map((reminder) => self.registration.showNotification(`Rappel : ${reminder.title}`, {
-    body: reminderText(reminder), tag: reminder.key, icon: ICON, data,
-  })));
+  // Copie récente : titre et texte déjà prêts (rendez-vous ou objectif). Ancienne copie : on les compose.
+  return Promise.all(due.map((reminder) => {
+    const hasText = typeof reminder.body === 'string';
+    return self.registration.showNotification(hasText ? reminder.title : `Rappel : ${reminder.title}`, {
+      body: hasText ? reminder.body : reminderText(reminder), tag: reminder.key, icon: ICON, data: { url: reminder.url ?? data.url },
+    });
+  }));
 }
 
 self.addEventListener('push', (event) => {

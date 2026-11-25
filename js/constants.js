@@ -26,6 +26,17 @@ export const REMINDER_OPTIONS = [
 ];
 export const DEFAULT_REMINDER = '15';
 
+/** Rappel d'échéance d'objectif, en minutes avant le jour J à 9 h ('' = aucun). */
+export const GOAL_REMINDER_OPTIONS = [
+  ['', 'Aucun rappel'],
+  ['0', 'Le jour de l’échéance'],
+  ['1440', 'La veille'],
+  ['4320', '3 jours avant'],
+  ['10080', '1 semaine avant'],
+  ['43200', '1 mois avant (30 jours)'],
+];
+export const DEFAULT_GOAL_REMINDER = '1440';
+
 export const GOAL_CATEGORIES = {
   spirituel: { label: 'Spirituel', color: '#6a4c93' },
   professionnel: { label: 'Professionnel', color: '#1f3a5f' },

@@ -3,7 +3,8 @@
 // pour compléter la notification.
 
 import { PUSH } from './config.js';
-import { DAY_MS, dueReminders } from './utils.js';
+import { remindable } from './reminders.js';
+import { DAY_MS, dueReminders, reminderMessage } from './utils.js';
 
 const WINDOW_DAYS = 30;
 const SYNC_DELAY_MS = 1500;
@@ -11,11 +12,14 @@ const SYNC_KEY = 'consilium:push-sync';
 export const SNAPSHOT_CACHE = 'consilium-data';
 const snapshotUrl = () => new URL('__consilium/rappels.json', document.baseURI).href;
 
-/** Rappels des 30 prochains jours, tels que le service worker les affichera. */
-export function upcomingReminders(events, now) {
-  return dueReminders(events, now, new Date(+now + WINDOW_DAYS * DAY_MS)).map((r) => ({
-    key: r.key, fireAt: +r.fireAt, start: +r.start, minutes: r.minutes,
-    title: r.event.title, location: r.event.location ?? '',
+/**
+ * Rappels des 30 prochains jours (rendez-vous et échéances d'objectifs), avec le texte exact
+ * de la notification que le service worker affichera.
+ */
+export function upcomingReminders(items, now) {
+  return dueReminders(items, now, new Date(+now + WINDOW_DAYS * DAY_MS)).map((r) => ({
+    key: r.key, fireAt: +r.fireAt, ...reminderMessage(r),
+    url: r.event.kind === 'goal' ? './#/objectifs' : './#/agenda',
   }));
 }
 
@@ -52,8 +56,8 @@ async function saveSnapshot(items) {
 }
 
 /** Met à jour la copie locale puis envoie les heures au serveur. */
-export async function syncPush(events) {
-  const items = upcomingReminders(events, new Date());
+export async function syncPush(state) {
+  const items = upcomingReminders(remindable(state), new Date());
   if ('caches' in window) await saveSnapshot(items);
   if (pushStatus() !== 'ready') return false;
   const subscription = await currentSubscription();
@@ -70,7 +74,7 @@ export async function syncPush(events) {
 /** Synchronise au démarrage, après chaque modification et au retour dans l'application. */
 export function startPushSync(store) {
   let timer;
-  const sync = () => syncPush(store.getState().events).catch((err) => console.error('Synchronisation des rappels impossible', err));
+  const sync = () => syncPush(store.getState()).catch((err) => console.error('Synchronisation des rappels impossible', err));
   sync();
   store.subscribe(() => {
     clearTimeout(timer);

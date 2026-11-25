@@ -3,7 +3,7 @@
 import { DEFAULT_REMINDER, EVENT_TYPES, REMINDER_OPTIONS, REPEAT_OPTIONS } from './constants.js';
 import { downloadIcs, googleCalendarUrl } from './ics.js';
 import { mountParticipants, participantsHtml, readParticipants } from './participants.js';
-import { notificationStatus, requestNotifications } from './reminders.js';
+import { askForNotifications } from './reminders.js';
 import { field, optionsHtml, requiredFieldHtml } from './ui.js';
 import { dateKey, escapeHtml, parseLocal, searchable, timeKey } from './utils.js';
 
@@ -73,18 +73,6 @@ function readEvent(fd) {
 function syncTimeFields(form) {
   const allDay = form.elements.allDay.checked;
   form.querySelectorAll('.time-field').forEach((el) => { el.hidden = allDay; });
-}
-
-/** Demande l'autorisation pendant le geste de l'utilisateur (exigé par les navigateurs). */
-function askForNotifications(ctx) {
-  const status = notificationStatus();
-  if (status === 'default') {
-    requestNotifications()
-      .then((result) => (result === 'granted' ? ctx.push.sync() : false))
-      .catch((err) => ctx.ui.reportError(err));
-  } else if (status === 'denied') {
-    ctx.ui.toast('Notifications bloquées : autorisez-les dans les réglages du navigateur pour recevoir les rappels.', 'error');
-  }
 }
 
 /**

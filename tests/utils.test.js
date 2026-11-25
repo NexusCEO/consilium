@@ -95,3 +95,32 @@ test('contactOccurrences : prochains rendez-vous d’un contact, récurrences co
   assert.equal(contactOccurrences(events, 'inconnu', d('2026-11-25T12:00'), 5).length, 0);
   assert.equal(contactOccurrences([{ id: 'x', start: '2026-12-01T10:00', end: '2026-12-01T11:00' }], 'awa', d('2026-11-25'), 5).length, 0);
 });
+
+test('goalReminderEvents : rappel à 9 h, N jours avant l’échéance ; ignore atteints, sans échéance ou sans rappel', async () => {
+  const { goalReminderEvents, dueReminders } = await import('../js/utils.js');
+  const goals = [
+    { id: 'g1', title: 'Lire la Bible', deadline: '2026-12-31', reminder: '1440', steps: [] },
+    { id: 'g2', title: 'Atteint', deadline: '2026-12-31', reminder: '0', achieved: true },
+    { id: 'g3', title: 'Sans échéance', deadline: '', reminder: '0' },
+    { id: 'g4', title: 'Sans rappel', deadline: '2026-12-31', reminder: '' },
+  ];
+  const evs = goalReminderEvents(goals);
+  assert.deepEqual(evs.map((e) => e.id), ['goal:g1']);
+  assert.equal(evs[0].kind, 'goal');
+  const due = dueReminders(evs, d('2026-12-30T08:59'), d('2026-12-30T09:00'));
+  assert.equal(due.length, 1);
+  assert.equal(+due[0].fireAt, +d('2026-12-30T09:00'));
+});
+
+test('reminderMessage : texte des notifications (rendez-vous et objectif)', async () => {
+  const { reminderMessage, goalReminderEvents, parseLocal: p } = await import('../js/utils.js');
+  const rdv = { event: { title: 'RDV avocat', location: 'Plateau' }, start: p('2026-11-26T10:00'), minutes: 15 };
+  assert.deepEqual(reminderMessage(rdv), { title: 'Rappel : RDV avocat', body: 'À 10:00 · Plateau' });
+  assert.equal(reminderMessage({ ...rdv, minutes: 0 }).body, 'Maintenant · Plateau');
+  const [goalEv] = goalReminderEvents([{ id: 'g', title: 'Épargne', deadline: '2026-12-31', reminder: '10080' }]);
+  const msg = reminderMessage({ event: goalEv, start: p('2026-12-31T09:00'), minutes: 10080 });
+  assert.equal(msg.title, 'Objectif : Épargne');
+  assert.match(msg.body, /^Échéance dans 7 jours \(jeudi 31 décembre\)$/);
+  assert.equal(reminderMessage({ event: goalEv, start: p('2026-12-31T09:00'), minutes: 0 }).body, 'Échéance aujourd’hui');
+  assert.equal(reminderMessage({ event: goalEv, start: p('2026-12-31T09:00'), minutes: 1440 }).body, 'Échéance demain (jeudi 31 décembre)');
+});

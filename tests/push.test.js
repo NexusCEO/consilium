@@ -11,11 +11,20 @@ test('upcomingReminders : 30 jours de rappels, avec les détails gardés sur l�
   ];
   const now = parseLocal('2026-11-25T12:00');
   const items = upcomingReminders(events, now);
-  const avocat = items.find((i) => i.title === 'RDV avocat');
+  const avocat = items.find((i) => i.title === 'Rappel : RDV avocat');
   assert.equal(avocat.fireAt, +parseLocal('2026-11-26T09:45'));
-  assert.equal(avocat.location, 'Plateau');
-  assert.equal(avocat.minutes, 15);
-  assert.ok(!items.some((i) => i.title === 'Sans rappel'));
-  assert.equal(items.filter((i) => i.title === 'Hebdo').length, 4); // 30 nov., 7, 14, 21 déc.
+  assert.equal(avocat.body, 'À 10:00 · Plateau');
+  assert.equal(avocat.url, './#/agenda');
+  assert.ok(!items.some((i) => i.title.includes('Sans rappel')));
+  assert.equal(items.filter((i) => i.title === 'Rappel : Hebdo').length, 4); // 30 nov., 7, 14, 21 déc.
   assert.ok(items.every((i) => i.fireAt > +now && i.fireAt <= +now + 30 * 86_400_000));
+});
+
+test('upcomingReminders inclut les échéances d’objectifs', async () => {
+  const { goalReminderEvents } = await import('../js/utils.js');
+  const items = upcomingReminders(goalReminderEvents([{ id: 'g', title: 'Épargne', deadline: '2026-12-10', reminder: '1440' }]), parseLocal('2026-11-25T12:00'));
+  assert.equal(items.length, 1);
+  assert.equal(items[0].title, 'Objectif : Épargne');
+  assert.equal(items[0].fireAt, +parseLocal('2026-12-09T09:00'));
+  assert.equal(items[0].url, './#/objectifs');
 });
