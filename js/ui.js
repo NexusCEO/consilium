@@ -105,16 +105,25 @@ function createToaster(dialog) {
     show(next);
   });
 
-  return (message, tone = 'info') => {
-    if (dialog.open) queued = { message, tone };
-    else show({ message, tone });
+  return {
+    toast(message, tone = 'info') {
+      if (dialog.open) queued = { message, tone };
+      else show({ message, tone });
+    },
+    /** À l'ouverture d'une fenêtre : la notification affichée est mise de côté et reviendra à la fermeture. */
+    suspend() {
+      if (!isOpen()) return;
+      queued = queued ?? { message: text.textContent, tone: el.classList.contains('error') ? 'error' : 'info' };
+      hide();
+    },
   };
 }
 
 export function createUi() {
   const dialog = document.getElementById('modal');
   setupDismiss(dialog);
-  const toast = createToaster(dialog);
+  const toaster = createToaster(dialog);
+  const { toast } = toaster;
 
   function reportError(err) {
     console.error(err);
@@ -177,6 +186,7 @@ export function createUi() {
     });
     initFields(form);
     onMount?.(form);
+    toaster.suspend();
     if (!dialog.open) dialog.showModal();
     form.querySelector('input:not([type=hidden]):not([type=checkbox]), select, textarea')?.focus();
   }

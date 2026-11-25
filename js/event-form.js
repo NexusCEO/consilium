@@ -2,13 +2,14 @@
 
 import { DEFAULT_REMINDER, EVENT_TYPES, REMINDER_OPTIONS, REPEAT_OPTIONS } from './constants.js';
 import { downloadIcs, googleCalendarUrl } from './ics.js';
+import { mountParticipants, participantsHtml, readParticipants } from './participants.js';
 import { notificationStatus, requestNotifications } from './reminders.js';
 import { field, optionsHtml, requiredFieldHtml } from './ui.js';
 import { dateKey, escapeHtml, parseLocal, searchable, timeKey } from './utils.js';
 
 const HOUR_MS = 3_600_000;
 
-function formHtml(ev, start, end) {
+function formHtml(ev, start, end, contacts, contactIds) {
   const allDay = Boolean(ev?.allDay);
   const recurring = ev?.repeat && ev.repeat !== 'none';
   return `
@@ -30,6 +31,7 @@ function formHtml(ev, start, end) {
       <label class="field"><span>Jusqu’au (facultatif)</span><input type="date" name="repeatUntil" value="${escapeHtml(ev?.repeatUntil)}"></label>
     </div>
     <label class="field"><span>Rappel</span><select name="reminder">${optionsHtml(REMINDER_OPTIONS, ev ? String(ev.reminder ?? '') : DEFAULT_REMINDER)}</select></label>
+    ${participantsHtml(contacts, contactIds)}
     <label class="field"><span>Lieu</span><input name="location" maxlength="200" value="${escapeHtml(ev?.location)}" placeholder="Adresse, salle, lien visio…"></label>
     <label class="field"><span>Notes</span><textarea name="notes" maxlength="5000">${escapeHtml(ev?.notes)}</textarea></label>
     ${recurring ? '<p class="muted">Événement récurrent : les modifications s’appliquent à toute la série.</p>' : ''}
@@ -85,15 +87,19 @@ function askForNotifications(ctx) {
   }
 }
 
-/** @param ev événement existant, ou null pour une création à `defaultStart`. */
-export function openEventForm(ctx, ev, defaultStart) {
+/**
+ * @param ev événement existant, ou null pour une création à `defaultStart`.
+ * @param presetContactIds participants cochés d'avance (création depuis une fiche contact).
+ */
+export function openEventForm(ctx, ev, defaultStart, presetContactIds = []) {
   const start = ev ? parseLocal(ev.start) : defaultStart;
   const end = ev ? parseLocal(ev.end) : new Date(+defaultStart + HOUR_MS);
+  const { contacts } = ctx.store.getState();
   ctx.ui.openForm({
     title: ev ? 'Modifier l’événement' : 'Nouvel événement',
-    html: formHtml(ev, start, end),
+    html: formHtml(ev, start, end, contacts, ev?.contactIds ?? presetContactIds),
     onSubmit(fd) {
-      const data = readEvent(fd);
+      const data = { ...readEvent(fd), contactIds: readParticipants(fd, contacts) };
       ctx.store.upsert('events', { ...(ev ?? {}), ...data });
       ctx.ui.toast(ev ? 'Événement modifié' : 'Événement créé');
       if (data.reminder !== '') askForNotifications(ctx);
@@ -101,6 +107,7 @@ export function openEventForm(ctx, ev, defaultStart) {
     onDelete: ev ? () => ctx.store.remove('events', ev.id) : null,
     onMount(form) {
       syncTimeFields(form);
+      mountParticipants(form);
       form.querySelector('[data-export-ics]')?.addEventListener('click', () => {
         ctx.ui.run(() => downloadIcs([ev], icsFilename(ev.title)), 'Fichier calendrier téléchargé');
       });

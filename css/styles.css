@@ -264,6 +264,24 @@ textarea { min-height: 84px; resize: vertical; }
 .fieldset legend { font-size: 13px; font-weight: 500; color: var(--muted); padding: 0 4px; }
 .fieldset .btn { justify-self: start; }
 .steps-editor { display: grid; gap: 6px; }
+
+/* Participants d'un rendez-vous */
+.participant-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; max-height: 232px; overflow-y: auto; overscroll-behavior: contain; }
+.participant-list li { display: flex; align-items: center; gap: 10px; padding: 0 6px; border-radius: 8px; }
+.participant-list li:has(input:checked) { background: color-mix(in srgb, var(--primary) 10%, var(--tint-base)); }
+.participant-list input { width: 20px; height: 20px; flex: none; margin: 0; }
+.participant-list label { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; min-height: 48px; cursor: pointer; }
+.participant-text { display: flex; flex-direction: column; min-width: 0; }
+.participant-text > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.avatar-sm { width: 30px; height: 30px; font-size: 12px; }
+.agenda-people { font-weight: 400; }
+
+/* Rendez-vous d'un contact */
+.next-rdv { margin: 0; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.upcoming { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 14px; }
+.upcoming li { display: flex; gap: 10px; }
+.upcoming-when { color: var(--muted); min-width: 118px; font-variant-numeric: tabular-nums; }
+.export-box h3 { margin: 0; }
 .step-row { display: flex; gap: 4px; align-items: center; }
 
 /* Animation d'ouverture / fermeture de la fenêtre (data-closing : repli pour Safari et Firefox). */

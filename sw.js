@@ -1,11 +1,11 @@
 // Réseau d'abord (toujours la dernière version), cache en secours (hors ligne).
-const CACHE = 'consilium-v8';
+const CACHE = 'consilium-v10';
 const DATA_CACHE = 'consilium-data'; // copie locale des rappels, jamais effacée par une mise à jour
 const ASSETS = [
   './', 'index.html', 'manifest.webmanifest', 'css/styles.css',
   'js/app.js', 'js/utils.js', 'js/store.js', 'js/constants.js', 'js/ui.js',
   'js/calendar.js', 'js/event-form.js', 'js/contacts.js', 'js/goals.js', 'js/data.js', 'js/reminders.js', 'js/ics.js',
-  'js/push.js', 'js/config.js', 'js/form-a11y.js',
+  'js/push.js', 'js/config.js', 'js/form-a11y.js', 'js/people.js', 'js/participants.js',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png',
 ];
 const ICON = 'icons/icon-192.png';
@@ -13,7 +13,8 @@ const MATCH_BEFORE_MS = 10 * 60_000;
 const MATCH_AFTER_MS = 2 * 60_000;
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(ASSETS)).then(() => self.skipWaiting()));
+  const fresh = ASSETS.map((path) => new Request(path, { cache: 'reload' }));
+  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(fresh)).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (event) => {
@@ -28,7 +29,9 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin) return;
   event.respondWith(
-    fetch(request)
+    // no-cache : on revérifie auprès du serveur (sinon le cache HTTP peut servir un fichier périmé
+    // pendant 10 min et mélanger ancienne et nouvelle version de l'app).
+    fetch(request, { cache: 'no-cache' })
       .then((response) => {
         if (response.ok) {
           const copy = response.clone();

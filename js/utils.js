@@ -97,6 +97,18 @@ export function dueReminders(events, from, to) {
   });
 }
 
+const CONTACT_HORIZON_DAYS = 366;
+
+/** Prochaines occurrences (à partir de `from`, sur un an) des événements où figure un contact, triées. */
+export function contactOccurrences(events, contactId, from, limit) {
+  const to = new Date(+from + CONTACT_HORIZON_DAYS * DAY_MS);
+  return events
+    .filter((ev) => (ev.contactIds ?? []).includes(contactId))
+    .flatMap((ev) => occurrencesInRange(ev, from, to).filter((o) => o.end >= from))
+    .sort((a, b) => a.start - b.start)
+    .slice(0, limit);
+}
+
 /** Répartit des blocs qui se chevauchent en colonnes (comme Google Agenda). */
 export function layoutColumns(items) {
   const sorted = [...items].sort((a, b) => a.start - b.start || b.end - a.end);

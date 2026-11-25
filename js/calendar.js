@@ -2,6 +2,7 @@
 
 import { EVENT_TYPES, GOAL_CATEGORIES } from './constants.js';
 import { openEventForm } from './event-form.js';
+import { participantNames } from './people.js';
 import {
   DAY_MS, addDays, addMonths, dateKey, endOfDay, escapeHtml, formatDate, layoutColumns, minutesBetween,
   monthGridStart, occurrencesInRange, pad, parseLocal, sameDay, startOfDay, startOfWeek, timeKey,
@@ -47,6 +48,7 @@ function viewTitle(mode, cursor) {
 function collectItems(state, start, end) {
   const events = state.events.flatMap((ev) => occurrencesInRange(ev, start, end).map((o) => ({
     ...o, kind: 'event', color: (EVENT_TYPES[ev.type] ?? EVENT_TYPES.autre).color,
+    people: participantNames(ev.contactIds, state.contacts),
   })));
   const deadlines = state.goals
     .filter((g) => g.deadline && !g.achieved && parseLocal(g.deadline))
@@ -66,9 +68,12 @@ const itemsOnDay = (items, day) => {
 };
 const itemAttrs = (it) => `data-kind="${it.kind}" data-id="${escapeHtml(it.id)}" style="--c:${it.color}"`;
 
+const withPeople = (it) => (it.people?.length ? `${it.title} — avec ${it.people.join(', ')}` : it.title);
+const peopleHtml = (it) => (it.people?.length ? `<span class="muted agenda-people">Avec ${escapeHtml(it.people.join(', '))}</span>` : '');
+
 function chipHtml(it) {
   const time = isAllDay(it) ? '' : `<b>${timeKey(it.start)}</b> `;
-  return `<button type="button" class="chip${isAllDay(it) ? ' solid' : ''}" ${itemAttrs(it)} title="${escapeHtml(it.title)}">${time}${escapeHtml(it.title)}</button>`;
+  return `<button type="button" class="chip${isAllDay(it) ? ' solid' : ''}" ${itemAttrs(it)} title="${escapeHtml(withPeople(it))}">${time}${escapeHtml(it.title)}</button>`;
 }
 
 function monthHtml(items, cursor) {
@@ -130,7 +135,7 @@ function agendaHtml(items, start) {
     const rows = list.map((it) => `<li><button type="button" class="agenda-item" ${itemAttrs(it)}>
       <span class="dot"></span>
       <span class="agenda-time">${isAllDay(it) ? 'Journée' : `${timeKey(it.start)} – ${timeKey(it.end)}`}</span>
-      <span class="agenda-title">${escapeHtml(it.title)}${it.location ? `<span class="muted">${escapeHtml(it.location)}</span>` : ''}</span>
+      <span class="agenda-title">${escapeHtml(it.title)}${it.location ? `<span class="muted">${escapeHtml(it.location)}</span>` : ''}${peopleHtml(it)}</span>
     </button></li>`).join('');
     return `<section class="agenda-day${sameDay(day, today) ? ' is-today' : ''}">
       <h2>${formatDate(day, { weekday: 'long', day: 'numeric', month: 'long' })}</h2><ul class="agenda-list">${rows}</ul></section>`;

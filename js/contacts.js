@@ -1,21 +1,30 @@
 // Répertoire de contacts rangés par domaine d'activité.
 
+import { openEventForm } from './event-form.js';
+import { domainOf, fullName, initials } from './people.js';
 import { field, requiredFieldHtml } from './ui.js';
-import { domainColor, escapeHtml, searchable } from './utils.js';
+import { contactOccurrences, domainColor, escapeHtml, formatDate, searchable, timeKey } from './utils.js';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const UPCOMING_IN_FORM = 5;
 const view = { domain: 'all', query: '' };
 
-const fullName = (c) => `${c.firstName ?? ''} ${c.lastName ?? ''}`.trim() || c.company || 'Sans nom';
-const initials = (c) => fullName(c).split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
-const domainOf = (c) => c.domain || 'Autre';
+const whenText = (o) => `${formatDate(o.start, { weekday: 'short', day: 'numeric', month: 'short' })}${o.allDay ? '' : ` · ${timeKey(o.start)}`}`;
+const nextHour = () => {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours() + 1);
+};
+
+/** Nouveau rendez-vous avec ce contact déjà coché comme participant. */
+const planWith = (ctx, contactId) => openEventForm(ctx, null, nextHour(), [contactId]);
 const searchText = (c) => searchable([c.firstName, c.lastName, c.company, c.role, c.phone, c.email, c.address, c.notes].join(' '));
 const byFavoriteThenName = (a, b) => Number(Boolean(b.favorite)) - Number(Boolean(a.favorite))
   || fullName(a).localeCompare(fullName(b), 'fr');
 
-function cardHtml(c) {
+function cardHtml(c, events, now) {
   const phone = String(c.phone ?? '').replace(/[^\d+]/g, '');
   const subtitle = [c.role, c.company].filter(Boolean).join(' · ');
+  const [next] = contactOccurrences(events, c.id, now, 1);
   return `<article class="contact-card">
     <button type="button" class="contact-main" data-edit="${escapeHtml(c.id)}">
       <span class="avatar" style="--c:${domainColor(domainOf(c))}">${escapeHtml(initials(c))}</span>
@@ -24,7 +33,9 @@ function cardHtml(c) {
         ${subtitle ? `<span class="muted ellipsis">${escapeHtml(subtitle)}</span>` : ''}
       </span>
     </button>
+    ${next ? `<p class="next-rdv"><span class="muted">Prochain RDV</span> ${escapeHtml(whenText(next))} — ${escapeHtml(next.title)}</p>` : ''}
     <div class="contact-actions">
+      <button type="button" class="link-btn" data-plan="${escapeHtml(c.id)}" aria-label="Planifier un rendez-vous avec ${escapeHtml(fullName(c))}">+ RDV</button>
       ${phone ? `<a class="link-btn" href="tel:${escapeHtml(phone)}">Appeler</a>` : ''}
       ${phone ? `<a class="link-btn" href="sms:${escapeHtml(phone)}">SMS</a>` : ''}
       ${c.email ? `<a class="link-btn" href="mailto:${escapeHtml(encodeURI(c.email))}">E-mail</a>` : ''}
@@ -43,13 +54,15 @@ function listHtml(state) {
     const msg = state.contacts.length ? 'Aucun contact ne correspond.' : 'Votre répertoire est vide. Ajoutez votre premier contact.';
     return `<div class="empty">${msg}</div>`;
   }
-  if (view.domain !== 'all') return `<div class="cards">${filtered.map(cardHtml).join('')}</div>`;
+  const now = new Date();
+  const cards = (list) => list.map((c) => cardHtml(c, state.events, now)).join('');
+  if (view.domain !== 'all') return `<div class="cards">${cards(filtered)}</div>`;
   const order = [...new Set([...state.domains, ...filtered.map(domainOf)])];
   return order.map((d) => {
     const list = filtered.filter((c) => domainOf(c) === d);
     if (!list.length) return '';
     return `<section class="group"><h2><span class="swatch" style="--c:${domainColor(d)}"></span>${escapeHtml(d)}
-      <span class="muted">${list.length}</span></h2><div class="cards">${list.map(cardHtml).join('')}</div></section>`;
+      <span class="muted">${list.length}</span></h2><div class="cards">${cards(list)}</div></section>`;
   }).join('');
 }
 
@@ -60,7 +73,7 @@ function filtersHtml(state) {
   return btn('all', 'Tous', state.contacts.length) + state.domains.map((d) => btn(d, d, counts[d] ?? 0)).join('');
 }
 
-function contactFormHtml(c, domains) {
+function contactFormHtml(c, domains, events) {
   const selected = c?.domain ?? (view.domain !== 'all' ? view.domain : domains[0]);
   const options = domains.map((d) => `<option${d === selected ? ' selected' : ''}>${escapeHtml(d)}</option>`).join('');
   const input = (name, label, type = 'text', extra = '') => `<label class="field"><span>${label}</span>
@@ -73,7 +86,21 @@ function contactFormHtml(c, domains) {
       ${requiredFieldHtml({ id: 'contact-email', name: 'email', label: 'E-mail', type: 'email', required: false, value: c?.email, placeholder: 'nom@exemple.com', error: 'adresse e-mail au format nom@exemple.com.' })}</div>
     ${input('address', 'Adresse')}
     <label class="field"><span>Notes</span><textarea name="notes" maxlength="5000">${escapeHtml(c?.notes)}</textarea></label>
-    <label class="check"><input type="checkbox" name="favorite"${c?.favorite ? ' checked' : ''}> Favori</label>`;
+    <label class="check"><input type="checkbox" name="favorite"${c?.favorite ? ' checked' : ''}> Favori</label>
+    ${c ? upcomingHtml(c, events) : ''}`;
+}
+
+/** Rendez-vous à venir avec ce contact, dans sa fiche. */
+function upcomingHtml(c, events) {
+  const upcoming = contactOccurrences(events, c.id, new Date(), UPCOMING_IN_FORM);
+  const list = upcoming.length
+    ? `<ul class="upcoming">${upcoming.map((o) => `<li><span class="upcoming-when">${escapeHtml(whenText(o))}</span>${escapeHtml(o.title)}</li>`).join('')}</ul>`
+    : '<p class="muted">Aucun rendez-vous prévu avec ce contact.</p>';
+  return `<section class="export-box" aria-labelledby="contact-rdv-title">
+      <h3 id="contact-rdv-title" class="field-label">Rendez-vous à venir</h3>
+      ${list}
+      <div><button type="button" class="btn" data-plan-from-form>+ Planifier un rendez-vous</button></div>
+    </section>`;
 }
 
 function readContact(fd, domains) {
@@ -87,15 +114,19 @@ function readContact(fd, domains) {
 }
 
 function openContactForm(ctx, contact) {
-  const { domains } = ctx.store.getState();
+  const { domains, events } = ctx.store.getState();
   ctx.ui.openForm({
     title: contact ? 'Modifier le contact' : 'Nouveau contact',
-    html: contactFormHtml(contact, domains),
+    html: contactFormHtml(contact, domains, events),
     onSubmit(fd) {
       ctx.store.upsert('contacts', { ...(contact ?? {}), ...readContact(fd, domains) });
       ctx.ui.toast(contact ? 'Contact modifié' : 'Contact ajouté');
     },
     onDelete: contact ? () => ctx.store.remove('contacts', contact.id) : null,
+    onMount(form) {
+      // Remplace la fiche par un nouveau rendez-vous (les modifications non enregistrées de la fiche sont abandonnées).
+      form.querySelector('[data-plan-from-form]')?.addEventListener('click', () => planWith(ctx, contact.id));
+    },
   });
 }
 
@@ -119,6 +150,7 @@ function handleClick(e, root, ctx) {
   else if (t.dataset.act === 'domain') openDomainForm(ctx);
   else if (t.dataset.domain) { view.domain = t.dataset.domain; renderContacts(root, ctx); }
   else if (t.dataset.edit) openContactForm(ctx, state.contacts.find((c) => c.id === t.dataset.edit));
+  else if (t.dataset.plan) planWith(ctx, t.dataset.plan);
   else if (t.dataset.fav) {
     const c = state.contacts.find((x) => x.id === t.dataset.fav);
     if (c) ctx.ui.run(() => ctx.store.upsert('contacts', { ...c, favorite: !c.favorite }));

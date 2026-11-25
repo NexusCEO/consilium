@@ -81,3 +81,17 @@ test('dueReminders : rappels dont l’heure tombe dans (from, to]', async () => 
   assert.ok(a.key.includes('a'));
   assert.equal(dueReminders(events, d('2026-11-25T09:45'), d('2026-11-25T09:50')).length, 0);
 });
+
+test('contactOccurrences : prochains rendez-vous d’un contact, récurrences comprises, triés', async () => {
+  const { contactOccurrences } = await import('../js/utils.js');
+  const events = [
+    { id: 'a', title: 'RDV avocat', start: '2026-12-02T10:00', end: '2026-12-02T11:00', contactIds: ['awa'] },
+    { id: 'b', title: 'Chantier', start: '2026-11-26T09:00', end: '2026-11-26T10:00', contactIds: ['yao'] },
+    { id: 'c', title: 'Point hebdo', start: '2026-11-02T08:00', end: '2026-11-02T09:00', repeat: 'weekly', contactIds: ['awa', 'yao'] },
+    { id: 'd', title: 'Passé', start: '2026-11-01T08:00', end: '2026-11-01T09:00', contactIds: ['awa'] },
+  ];
+  const next = contactOccurrences(events, 'awa', d('2026-11-25T12:00'), 3);
+  assert.deepEqual(next.map((o) => [o.id, dateKey(o.start)]), [['c', '2026-11-30'], ['a', '2026-12-02'], ['c', '2026-12-07']]);
+  assert.equal(contactOccurrences(events, 'inconnu', d('2026-11-25T12:00'), 5).length, 0);
+  assert.equal(contactOccurrences([{ id: 'x', start: '2026-12-01T10:00', end: '2026-12-01T11:00' }], 'awa', d('2026-11-25'), 5).length, 0);
+});
