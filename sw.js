@@ -1,5 +1,5 @@
 // Réseau d'abord (toujours la dernière version), cache en secours (hors ligne).
-const CACHE = 'consilium-v4';
+const CACHE = 'consilium-v5';
 const DATA_CACHE = 'consilium-data'; // copie locale des rappels, jamais effacée par une mise à jour
 const ASSETS = [
   './', 'index.html', 'manifest.webmanifest', 'css/styles.css',

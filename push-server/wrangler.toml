@@ -14,7 +14,7 @@ crons = ["* * * * *"]
 [[d1_databases]]
 binding = "DB"
 database_name = "consilium-push"
-database_id = "00000000-0000-0000-0000-000000000000" # remplacé au déploiement
+database_id = "bc09812c-de7f-4bfb-888d-0f24d9511acf"
 
 [[ratelimits]]
 name = "LIMITER"
