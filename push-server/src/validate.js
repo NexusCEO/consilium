@@ -40,3 +40,25 @@ export function parseTimes(value, now) {
   if (!value.every((t) => Number.isInteger(t))) throw new HttpError(400, 'Heures de rappel invalides.');
   return [...new Set(value)].filter((t) => t > now && t <= now + HORIZON_MS).sort((a, b) => a - b);
 }
+
+/** Taille maximale d'une copie chiffrée synchronisée (D1 accepte 2 Mo par valeur). */
+export const MAX_SYNC_BYTES = 1_500_000;
+const BASE64 = /^[A-Za-z0-9+/]+={0,2}$/;
+
+/** Identifiant de copie synchronisée : empreinte SHA-256 en hexadécimal. */
+export function parseSyncId(value) {
+  if (typeof value !== 'string' || !/^[0-9a-f]{64}$/.test(value)) {
+    throw new HttpError(400, 'Identifiant de synchronisation invalide.');
+  }
+  return value;
+}
+
+/** Copie chiffrée envoyée par un appareil : le serveur ne peut ni ne doit la lire. */
+export function parseSyncBody(body) {
+  if (!body || typeof body !== 'object') throw new HttpError(400, 'Données de synchronisation manquantes.');
+  const { baseVersion, iv, data } = body;
+  if (!Number.isInteger(baseVersion) || baseVersion < 0) throw new HttpError(400, 'Version invalide.');
+  if (typeof iv !== 'string' || iv.length !== 16 || !BASE64.test(iv)) throw new HttpError(400, 'Vecteur de chiffrement invalide.');
+  if (typeof data !== 'string' || !data || !BASE64.test(data)) throw new HttpError(400, 'Données chiffrées invalides.');
+  return { baseVersion, iv, data };
+}

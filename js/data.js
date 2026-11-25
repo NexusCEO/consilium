@@ -1,6 +1,7 @@
 // Sauvegarde / restauration et installation de l'application.
 
 import { downloadIcs } from './ics.js';
+import { handleJoin, handleSyncAction, syncPanelHtml } from './sync-panel.js';
 import { lastPushSync, pushStatus } from './push.js';
 import { notificationStatus, requestNotifications } from './reminders.js';
 import { dateKey, formatDate } from './utils.js';
@@ -107,13 +108,14 @@ export function renderData(root, ctx) {
     <header class="toolbar"><h1 class="page-title">Données</h1></header>
     <section class="panel">
       <h2>Vos données</h2>
-      <p class="muted">Tout est enregistré sur cet appareil, dans ce navigateur, sans compte ni serveur. Exportez une sauvegarde régulièrement et restaurez-la pour passer d’un appareil à l’autre.</p>
+      <p class="muted">Tout est enregistré sur cet appareil, sans compte. Activez la synchronisation ci-dessous pour retrouver vos données sur vos autres appareils, et exportez de temps en temps une sauvegarde.</p>
       <div class="stats">${stat(events.length, 'événements')}${stat(contacts.length, 'contacts')}${stat(goals.length, 'objectifs')}</div>
       <div class="toolbar-group">
         <button type="button" class="btn btn-primary" data-act="export">Exporter une sauvegarde</button>
         <label class="btn">Restaurer une sauvegarde<input type="file" accept="application/json,.json" data-act="import" hidden></label>
       </div>
     </section>
+    ${syncPanelHtml(ctx.sync)}
     ${phoneCalendarPanel(events.length)}
     ${notificationsPanel()}
     <section class="panel">
@@ -127,6 +129,7 @@ export function renderData(root, ctx) {
     </section>`;
   root.onclick = (e) => {
     const act = e.target.closest('[data-act]')?.dataset.act;
+    if (handleSyncAction(act, ctx)) return;
     if (act === 'export') ctx.ui.run(() => exportBackup(ctx));
     if (act === 'install') ctx.install.prompt();
     if (act === 'export-ics') ctx.ui.run(() => downloadIcs(ctx.store.getState().events, `consilium-agenda-${dateKey(new Date())}.ics`), 'Fichier calendrier téléchargé');
@@ -134,4 +137,8 @@ export function renderData(root, ctx) {
     if (act === 'test-notify') testNotification(ctx).catch((err) => ctx.ui.reportError(err));
   };
   root.onchange = (e) => { if (e.target.matches('[data-act=import]')) importBackup(ctx, e.target); };
+  root.querySelector('[data-join]')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    handleJoin(e.target, ctx);
+  });
 }

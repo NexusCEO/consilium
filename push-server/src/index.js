@@ -1,9 +1,11 @@
 // Serveur de rappels Consilium (Cloudflare Worker + D1).
 //   PUT    /reminders  {endpoint, times[]}  remplace les heures de rappel d'un appareil
 //   DELETE /reminders  {endpoint}           désabonne un appareil
+//   GET/PUT/DELETE /sync/:id               copie chiffrée des données (voir sync.js)
 //   tâche planifiée (chaque minute)        envoie les notifications arrivées à échéance
 
 import { HttpError, MAX_BODY_BYTES, parseEndpoint, parseTimes } from './validate.js';
+import { handleSync } from './sync.js';
 import { sendPush } from './vapid.js';
 
 const SEND_BATCH = 200;
@@ -19,7 +21,7 @@ function corsHeaders(request, env) {
   if (!String(env.ALLOWED_ORIGINS ?? '').split(',').includes(origin)) return {};
   return {
     'Access-Control-Allow-Origin': origin,
-    'Access-Control-Allow-Methods': 'PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, PUT, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Max-Age': '86400',
     Vary: 'Origin',
@@ -30,9 +32,11 @@ const reply = (status, body, headers) => new Response(JSON.stringify(body), {
   status, headers: { 'Content-Type': 'application/json', ...headers },
 });
 
-async function readJson(request) {
+async function readJson(request, maxBytes = MAX_BODY_BYTES) {
+  const declared = Number(request.headers.get('Content-Length') ?? 0);
+  if (declared > maxBytes) throw new HttpError(413, 'Requête trop volumineuse.');
   const text = await request.text();
-  if (text.length > MAX_BODY_BYTES) throw new HttpError(413, 'Requête trop volumineuse.');
+  if (text.length > maxBytes) throw new HttpError(413, 'Requête trop volumineuse.');
   try {
     return JSON.parse(text) ?? {};
   } catch {
@@ -82,6 +86,11 @@ async function handleRequest(request, env) {
   const { pathname } = new URL(request.url);
   try {
     if (pathname === '/') return reply(200, { success: true, data: { service: 'consilium-push' } }, headers);
+    const syncMatch = /^\/sync\/([^/]+)$/.exec(pathname);
+    if (syncMatch) {
+      await checkRateLimit(request, env);
+      return reply(200, { success: true, data: await handleSync(request, env, syncMatch[1], readJson) }, headers);
+    }
     if (pathname !== '/reminders') throw new HttpError(404, 'Introuvable.');
     await checkRateLimit(request, env);
     if (request.method === 'PUT') return reply(200, { success: true, data: await putReminders(request, env, Date.now()) }, headers);

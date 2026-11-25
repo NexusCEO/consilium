@@ -1,5 +1,6 @@
 // Stockage local (localStorage) avec mises à jour immuables.
 
+import { mergeStates, sameContent } from './merge.js';
 import { uid } from './utils.js';
 
 export const STORAGE_KEY = 'consilium:v1';
@@ -9,7 +10,19 @@ export const DEFAULT_DOMAINS = [
 ];
 const COLLECTIONS = ['events', 'contacts', 'goals'];
 
-export const emptyState = () => ({ version: 1, events: [], contacts: [], goals: [], domains: [...DEFAULT_DOMAINS] });
+const emptyDeleted = () => ({ events: {}, contacts: {}, goals: {} });
+export const emptyState = () => ({ version: 1, events: [], contacts: [], goals: [], domains: [...DEFAULT_DOMAINS], deleted: emptyDeleted() });
+
+/** Traces de suppression (id → date) utilisées par la synchronisation ; les valeurs invalides sont ignorées. */
+function validateDeleted(value) {
+  const out = emptyDeleted();
+  if (!value || typeof value !== 'object') return out;
+  for (const name of COLLECTIONS) {
+    const entries = Object.entries(value[name] ?? {}).filter(([, at]) => Number.isFinite(Number(at)));
+    out[name] = Object.fromEntries(entries.map(([id, at]) => [id, Number(at)]));
+  }
+  return out;
+}
 
 /** Valide et normalise des données importées ou relues. Lève une Error lisible si invalide. */
 export function validateData(data) {
@@ -27,6 +40,7 @@ export function validateData(data) {
     const names = data.domains.filter((d) => typeof d === 'string' && d.trim()).map((d) => d.trim());
     if (names.length) out.domains = [...new Set(names)];
   }
+  out.deleted = validateDeleted(data.deleted);
   return out;
 }
 
@@ -70,7 +84,7 @@ export function createStore(storage) {
     },
     upsert(collection, item) {
       assertCollection(collection);
-      const saved = item.id ? item : { ...item, id: uid() };
+      const saved = { ...item, id: item.id || uid(), updatedAt: Date.now() };
       const list = state[collection];
       const exists = list.some((i) => i.id === saved.id);
       const nextList = exists ? list.map((i) => (i.id === saved.id ? saved : i)) : [...list, saved];
@@ -79,7 +93,8 @@ export function createStore(storage) {
     },
     remove(collection, id) {
       assertCollection(collection);
-      commit({ ...state, [collection]: state[collection].filter((i) => i.id !== id) });
+      const deleted = { ...state.deleted, [collection]: { ...state.deleted[collection], [id]: Date.now() } };
+      commit({ ...state, [collection]: state[collection].filter((i) => i.id !== id), deleted });
     },
     addDomain(name) {
       const clean = String(name ?? '').trim();
@@ -91,6 +106,13 @@ export function createStore(storage) {
     },
     replaceAll(data) {
       commit(validateData(data));
+    },
+    /** Fusionne une copie venue d'un autre appareil (déjà déchiffrée). Renvoie true si quelque chose a changé ici. */
+    merge(remote) {
+      const next = mergeStates(state, validateData(remote));
+      if (sameContent(next, state)) return false;
+      commit(next);
+      return true;
     },
   };
 }

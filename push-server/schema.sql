@@ -14,3 +14,12 @@ CREATE TABLE IF NOT EXISTS reminders (
 
 CREATE INDEX IF NOT EXISTS reminders_fire_at ON reminders (fire_at);
 CREATE INDEX IF NOT EXISTS reminders_subscription ON reminders (subscription_id);
+
+-- Copie des données synchronisées entre appareils, chiffrée par les appareils (illisible ici).
+CREATE TABLE IF NOT EXISTS sync_copies (
+  id TEXT PRIMARY KEY,          -- empreinte dérivée du code de synchronisation
+  version INTEGER NOT NULL,     -- augmente à chaque envoi (détection des envois simultanés)
+  iv TEXT NOT NULL,
+  data TEXT NOT NULL,           -- base64 du contenu chiffré (AES-GCM)
+  updated_at INTEGER NOT NULL
+);

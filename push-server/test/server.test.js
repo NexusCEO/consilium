@@ -69,3 +69,20 @@ test('sendPush envoie une notification vide avec TTL et renvoie le statut', asyn
   assert.equal(seen.init.headers.TTL, '3600');
   assert.match(seen.init.headers.Authorization, /^vapid t=/);
 });
+
+test('parseSyncId : empreinte hexadécimale de 64 caractères uniquement', async () => {
+  const { parseSyncId } = await import('../src/validate.js');
+  const id = 'a'.repeat(64);
+  assert.equal(parseSyncId(id), id);
+  for (const bad of ['A'.repeat(64), 'a'.repeat(63), '../etc', undefined]) assert.throws(() => parseSyncId(bad), HttpError);
+});
+
+test('parseSyncBody : version de base entière, données en base64', async () => {
+  const { parseSyncBody } = await import('../src/validate.js');
+  const ok = { baseVersion: 3, iv: 'AAAAAAAAAAAAAAAA', data: 'SGVsbG8gd29ybGQ=' };
+  assert.deepEqual(parseSyncBody(ok), ok);
+  assert.throws(() => parseSyncBody({ ...ok, baseVersion: -1 }), HttpError);
+  assert.throws(() => parseSyncBody({ ...ok, iv: 'court' }), HttpError);
+  assert.throws(() => parseSyncBody({ ...ok, data: '<script>' }), HttpError);
+  assert.throws(() => parseSyncBody(null), HttpError);
+});

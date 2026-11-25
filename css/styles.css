@@ -276,6 +276,13 @@ textarea { min-height: 84px; resize: vertical; }
 .avatar-sm { width: 30px; height: 30px; font-size: 12px; }
 .agenda-people { font-weight: 400; }
 
+/* Synchronisation */
+.sync-join { display: grid; gap: 6px; }
+.sync-code-input { max-width: 300px; font-family: ui-monospace, "SF Mono", Menlo, monospace; text-transform: uppercase; letter-spacing: .04em; }
+.sync-code-box { display: grid; gap: 8px; padding: 12px; border-radius: 8px; background: var(--surface-2); }
+.sync-code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 17px; letter-spacing: .06em; padding: 6px 10px; border-radius: 6px; background: var(--surface); border: 1px solid var(--border); user-select: all; overflow-wrap: anywhere; }
+.copy-tip { min-inline-size: 1ch; }
+
 /* Rendez-vous d'un contact */
 .next-rdv { margin: 0; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .upcoming { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 14px; }
